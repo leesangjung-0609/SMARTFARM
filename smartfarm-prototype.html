@@ -1,0 +1,1320 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SWINGOIL Smart Farm Dashboard</title>
+  <style>
+    :root {
+      --bg: #eef4ef;
+      --panel: #ffffff;
+      --panel-soft: #f7faf7;
+      --ink: #1e2a22;
+      --muted: #66746b;
+      --line: #d9e5dc;
+      --green: #2f8c5f;
+      --green-2: #69b36d;
+      --blue: #3278b8;
+      --sky: #a9d9f1;
+      --yellow: #f4bd45;
+      --orange: #d77c2e;
+      --red: #ce4f4f;
+      --violet: #7567b9;
+      --shadow: 0 18px 45px rgba(24, 42, 29, 0.13);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", "Malgun Gothic", Arial, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(244, 189, 69, 0.18), transparent 30%),
+        linear-gradient(135deg, #e7f1ec 0%, #f8fbf8 48%, #e8f2f7 100%);
+      letter-spacing: 0;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(240px, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: linear-gradient(145deg, var(--green), #236f4a);
+      color: #fff;
+      font-weight: 900;
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(23px, 2.4vw, 34px);
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .status-row {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(47, 140, 95, 0.15);
+    }
+
+    .dot.warn { background: var(--orange); box-shadow: 0 0 0 4px rgba(215, 124, 46, 0.16); }
+    .dot.danger { background: var(--red); box-shadow: 0 0 0 4px rgba(206, 79, 79, 0.16); }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr 1fr;
+      grid-template-areas:
+        "solar hero wind"
+        "left hero right"
+        "state weather emergency";
+      gap: 14px;
+      align-items: stretch;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-head {
+      min-height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 13px 15px 8px;
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.2;
+    }
+
+    .card-sub {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .icon-btn, .primary-btn, .ghost-btn {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .icon-btn {
+      width: 40px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .primary-btn {
+      padding: 0 14px;
+      border-color: var(--green);
+      background: var(--green);
+      color: #fff;
+    }
+
+    .ghost-btn {
+      padding: 0 12px;
+      background: var(--panel-soft);
+      color: var(--muted);
+    }
+
+    .solar { grid-area: solar; }
+    .wind { grid-area: wind; }
+    .hero { grid-area: hero; }
+    .left-panel { grid-area: left; }
+    .right-panel { grid-area: right; }
+    .state-panel { grid-area: state; }
+    .weather-panel { grid-area: weather; }
+    .emergency-panel { grid-area: emergency; }
+
+    .energy-card {
+      min-height: 286px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .energy-body {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 4px 15px 15px;
+    }
+
+    .solar-illustration, .wind-illustration {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #f9fcff, #eef7f0);
+      border: 1px solid var(--line);
+    }
+
+    .sun {
+      position: relative;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: #ffd45a;
+      box-shadow: 0 0 0 12px rgba(244, 189, 69, 0.18);
+      margin-bottom: 20px;
+    }
+
+    .sun::after {
+      content: "";
+      position: absolute;
+      left: 22px;
+      top: 82px;
+      width: 106px;
+      height: 58px;
+      transform: skewX(-22deg);
+      background:
+        linear-gradient(90deg, transparent 31%, rgba(30, 42, 34, 0.28) 32%, transparent 34%),
+        linear-gradient(0deg, transparent 48%, rgba(30, 42, 34, 0.28) 49%, transparent 51%),
+        linear-gradient(135deg, #50637a, #b9c7d5);
+      border: 3px solid #4a596c;
+    }
+
+    .windmill {
+      position: relative;
+      width: 130px;
+      height: 158px;
+    }
+
+    .tower {
+      position: absolute;
+      left: 60px;
+      top: 58px;
+      width: 11px;
+      height: 93px;
+      background: linear-gradient(90deg, #77869b, #d9e0e7);
+      clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%);
+    }
+
+    .base-line {
+      position: absolute;
+      left: 18px;
+      right: 14px;
+      bottom: 6px;
+      height: 4px;
+      background: #72809a;
+      border-radius: 999px;
+    }
+
+    .rotor {
+      position: absolute;
+      left: 50px;
+      top: 38px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #6f7da0;
+      animation: spin 4s linear infinite;
+    }
+
+    .blade {
+      position: absolute;
+      left: 14px;
+      top: -43px;
+      width: 6px;
+      height: 58px;
+      border-radius: 80% 80% 12% 12%;
+      transform-origin: 50% 59px;
+      background: #7f8ec3;
+    }
+
+    .blade:nth-child(2) { transform: rotate(120deg); }
+    .blade:nth-child(3) { transform: rotate(240deg); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .energy-stats {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mini-stat {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .mini-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .mini-stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .battery-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      padding: 0 15px 15px;
+    }
+
+    .battery {
+      position: relative;
+      min-height: 74px;
+      padding: 10px;
+      border: 3px solid var(--green);
+      border-radius: 8px;
+      background: #fafffb;
+    }
+
+    .battery::after {
+      content: "";
+      position: absolute;
+      right: -9px;
+      top: 23px;
+      width: 6px;
+      height: 24px;
+      border-radius: 0 4px 4px 0;
+      background: var(--green);
+    }
+
+    .battery-fill {
+      position: absolute;
+      left: 9px;
+      right: 9px;
+      bottom: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #e7eee8;
+      overflow: hidden;
+    }
+
+    .battery-fill span {
+      display: block;
+      width: var(--value);
+      height: 100%;
+      background: var(--fill, var(--green));
+    }
+
+    .battery strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .battery small {
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .farm-stage {
+      position: relative;
+      min-height: 424px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.7)),
+        linear-gradient(120deg, #e6f2ff, #f4fbf1);
+    }
+
+    .farm-scene {
+      position: relative;
+      min-height: 260px;
+      margin: 8px 16px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, #cfeaf7 0 47%, #d6b48b 48% 100%);
+    }
+
+    .greenhouse {
+      position: absolute;
+      left: 7%;
+      right: 7%;
+      bottom: 34px;
+      height: 168px;
+      border: 5px solid #6384c8;
+      border-top: 0;
+      background: rgba(232, 248, 255, 0.45);
+      clip-path: polygon(0 30%, 20% 0, 80% 0, 100% 30%, 100% 100%, 0 100%);
+    }
+
+    .greenhouse::before {
+      content: "";
+      position: absolute;
+      left: 19%;
+      top: 0;
+      width: 5px;
+      height: 100%;
+      background: #6384c8;
+      transform: skewX(-28deg);
+    }
+
+    .greenhouse::after {
+      content: "";
+      position: absolute;
+      right: 19%;
+      top: 0;
+      width: 5px;
+      height: 100%;
+      background: #6384c8;
+      transform: skewX(28deg);
+    }
+
+    .soil-bed {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 42px;
+      background:
+        repeating-linear-gradient(135deg, rgba(91, 62, 33, 0.35) 0 6px, transparent 6px 14px),
+        #9a6b44;
+    }
+
+    .plant {
+      position: absolute;
+      bottom: 35px;
+      width: 6px;
+      height: var(--h);
+      border-radius: 999px;
+      background: #348957;
+    }
+
+    .plant::before,
+    .plant::after {
+      content: "";
+      position: absolute;
+      width: 16px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--leaf, #6bb66b);
+    }
+
+    .plant::before { left: -13px; top: 28%; transform: rotate(-28deg); }
+    .plant::after { right: -13px; top: 14%; transform: rotate(28deg); }
+
+    .fruit {
+      position: absolute;
+      left: -7px;
+      top: -12px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #d45a52;
+      border: 2px solid rgba(120, 31, 31, 0.24);
+    }
+
+    .farm-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding: 13px 16px 16px;
+    }
+
+    .metric {
+      min-height: 92px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.9);
+    }
+
+    .metric span {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .metric strong {
+      display: block;
+      margin: 10px 0 8px;
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .bar {
+      height: 8px;
+      border-radius: 999px;
+      background: #e8eee8;
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      width: var(--value);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--accent, var(--green));
+      transition: width 180ms ease;
+    }
+
+    .info-panel {
+      min-height: 252px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .panel-body {
+      padding: 0 15px 15px;
+    }
+
+    .big-number {
+      margin: 2px 0 12px;
+      font-size: 44px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .list-item {
+      display: grid;
+      grid-template-columns: 88px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(47, 140, 95, 0.12);
+      color: #236f4a;
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .tag.red { background: rgba(206, 79, 79, 0.12); color: #a93838; }
+    .tag.orange { background: rgba(215, 124, 46, 0.14); color: #a45b1d; }
+    .tag.blue { background: rgba(50, 120, 184, 0.13); color: #2d6598; }
+
+    .name {
+      min-width: 0;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .desc {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .condition-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .condition {
+      min-height: 82px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .condition span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .condition strong {
+      display: block;
+      margin-top: 7px;
+      font-size: 20px;
+    }
+
+    .mood-grid {
+      display: grid;
+      gap: 9px;
+    }
+
+    .mood {
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .face {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border: 3px solid currentColor;
+      border-radius: 50%;
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .happy { color: var(--green); }
+    .bored { color: var(--orange); }
+    .worry { color: var(--violet); }
+    .cry { color: var(--blue); }
+
+    .weather-main {
+      min-height: 118px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(145deg, #f9fcff, #edf7fb);
+      text-align: center;
+    }
+
+    .weather-main strong {
+      display: block;
+      font-size: 42px;
+      line-height: 1;
+    }
+
+    .weather-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .weather-tab {
+      min-height: 54px;
+      padding: 8px 6px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      text-align: center;
+      font-weight: 900;
+    }
+
+    .weather-tab span {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .control {
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .control-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .switch {
+      position: relative;
+      width: 52px;
+      height: 30px;
+      flex: 0 0 auto;
+    }
+
+    .switch input {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: #c8d4cc;
+      transition: background 160ms ease;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      left: 4px;
+      top: 4px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 7px rgba(0,0,0,0.2);
+      transition: transform 160ms ease;
+    }
+
+    .switch input:checked + .slider { background: var(--green); }
+    .switch input:checked + .slider::before { transform: translateX(22px); }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--green);
+    }
+
+    .emergency-body {
+      display: grid;
+      gap: 12px;
+      padding: 0 15px 15px;
+    }
+
+    .alert-box {
+      padding: 14px;
+      border: 2px solid rgba(206, 79, 79, 0.35);
+      border-radius: 8px;
+      background: rgba(206, 79, 79, 0.08);
+    }
+
+    .alert-number {
+      display: flex;
+      align-items: flex-end;
+      gap: 9px;
+      color: var(--red);
+      font-size: 58px;
+      line-height: 0.9;
+      font-weight: 900;
+    }
+
+    .alert-number span {
+      padding-bottom: 5px;
+      color: #9f3a3a;
+      font-size: 15px;
+    }
+
+    .emergency-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      width: min(360px, calc(100vw - 40px));
+      padding: 13px 15px;
+      border-radius: 8px;
+      background: #172118;
+      color: #fff;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(16px);
+      pointer-events: none;
+      transition: opacity 170ms ease, transform 170ms ease;
+      z-index: 20;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 1180px) {
+      .dashboard {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "hero hero"
+          "solar wind"
+          "left right"
+          "state weather"
+          "emergency emergency";
+      }
+    }
+
+    @media (max-width: 760px) {
+      .app { padding: 12px; }
+      .topbar { grid-template-columns: 1fr; }
+      .status-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        justify-content: stretch;
+      }
+      .dashboard {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "hero"
+          "solar"
+          "wind"
+          "left"
+          "right"
+          "state"
+          "weather"
+          "emergency";
+      }
+      .energy-body,
+      .farm-summary,
+      .battery-row,
+      .condition-grid,
+      .control-grid,
+      .emergency-actions {
+        grid-template-columns: 1fr;
+      }
+      .list-item {
+        grid-template-columns: 74px 1fr;
+      }
+      .list-item .tag:last-child {
+        grid-column: 2;
+        justify-self: start;
+      }
+      .weather-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .farm-scene {
+        min-height: 232px;
+      }
+    }
+
+    @media (max-width: 420px) {
+      .status-row { grid-template-columns: 1fr; }
+      .pill { white-space: normal; }
+      .big-number { font-size: 37px; }
+      .alert-number { font-size: 46px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">SF</div>
+        <div>
+          <h1>SWINGOIL 스마트팜 관제</h1>
+          <div class="subtitle">태양광·풍력 발전, 배터리 충방전, 작물 상태, 화재·재난 대응을 한 화면에서 확인합니다.</div>
+        </div>
+      </div>
+      <div class="status-row" aria-label="시스템 상태">
+        <span class="pill"><span class="dot" id="serverDot"></span><span id="serverText">웹 서비스 정상</span></span>
+        <span class="pill"><span class="dot warn" id="deviceDot"></span><span id="deviceText">센서 모의 연결</span></span>
+        <span class="pill" id="clock">--:--:--</span>
+        <span class="pill">운전 모드 <strong id="modeText">자동</strong></span>
+      </div>
+    </header>
+
+    <section class="dashboard">
+      <article class="card energy-card solar">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">태양광 발전</h2>
+            <div class="card-sub">누적 발전량과 패널 효율</div>
+          </div>
+          <button class="icon-btn" id="solarBtn" type="button" title="태양광 상세">☀</button>
+        </div>
+        <div class="energy-body">
+          <div class="solar-illustration" aria-hidden="true"><div class="sun"></div></div>
+          <div class="energy-stats">
+            <div class="mini-stat"><span>현재 발전</span><strong><span id="solarNow">2.8</span> kW</strong></div>
+            <div class="mini-stat"><span>오늘 누적</span><strong><span id="solarTotal">18.4</span> kWh</strong></div>
+            <div class="mini-stat"><span>패널 온도</span><strong><span id="panelTemp">31</span>°C</strong></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card farm-stage hero">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">스마트팜 상태</h2>
+            <div class="card-sub">온실 센서와 작물 생장 상태</div>
+          </div>
+          <button class="primary-btn" id="refreshBtn" type="button">새로고침</button>
+        </div>
+        <div class="farm-scene" aria-label="스마트팜 온실 그림">
+          <div class="greenhouse"></div>
+          <div class="soil-bed"></div>
+          <div class="plant" style="left:15%; --h:74px;"><span class="fruit"></span></div>
+          <div class="plant" style="left:25%; --h:92px;"></div>
+          <div class="plant" style="left:35%; --h:82px;"><span class="fruit"></span></div>
+          <div class="plant" style="left:47%; --h:108px;"><span class="fruit"></span></div>
+          <div class="plant" style="left:58%; --h:86px;"></div>
+          <div class="plant" style="left:68%; --h:99px;"><span class="fruit"></span></div>
+          <div class="plant" style="left:79%; --h:75px;"></div>
+        </div>
+        <div class="farm-summary">
+          <div class="metric"><span>온도 <em>센서</em></span><strong><span id="temp">24.8</span>°C</strong><div class="bar" style="--accent: var(--orange);"><span id="tempBar" style="--value:62%;"></span></div></div>
+          <div class="metric"><span>습도 <em>센서</em></span><strong><span id="humidity">63</span>%</strong><div class="bar" style="--accent: var(--blue);"><span id="humidityBar" style="--value:63%;"></span></div></div>
+          <div class="metric"><span>토양 수분 <em>센서</em></span><strong><span id="soil">48</span>%</strong><div class="bar"><span id="soilBar" style="--value:48%;"></span></div></div>
+          <div class="metric"><span>광량 <em>센서</em></span><strong><span id="light">730</span> lx</strong><div class="bar" style="--accent: var(--yellow);"><span id="lightBar" style="--value:73%;"></span></div></div>
+        </div>
+      </article>
+
+      <article class="card energy-card wind">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">풍력 발전</h2>
+            <div class="card-sub">바람 세기와 발전 현황</div>
+          </div>
+          <button class="icon-btn" id="windBtn" type="button" title="풍력 상세">↻</button>
+        </div>
+        <div class="energy-body">
+          <div class="wind-illustration" aria-hidden="true">
+            <div class="windmill">
+              <div class="tower"></div>
+              <div class="rotor"><span class="blade"></span><span class="blade"></span><span class="blade"></span></div>
+              <div class="base-line"></div>
+            </div>
+          </div>
+          <div class="energy-stats">
+            <div class="mini-stat"><span>현재 발전</span><strong><span id="windNow">1.6</span> kW</strong></div>
+            <div class="mini-stat"><span>오늘 누적</span><strong><span id="windTotal">9.2</span> kWh</strong></div>
+            <div class="mini-stat"><span>풍속</span><strong><span id="windSpeed">4.8</span> m/s</strong></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card info-panel left-panel">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">누적 발전량</h2>
+            <div class="card-sub">패널 온도 및 발전 현황</div>
+          </div>
+          <span class="tag blue">전력</span>
+        </div>
+        <div class="panel-body">
+          <div class="big-number"><span id="totalEnergy">27.6</span> kWh</div>
+          <div class="battery-row">
+            <div class="battery"><strong><span id="batteryA">30</span>%</strong><small>E 발전</small><div class="battery-fill" style="--fill: var(--red);"><span id="batteryABar" style="--value:30%;"></span></div></div>
+            <div class="battery"><strong><span id="batteryB">80</span>%</strong><small>저장</small><div class="battery-fill" style="--fill: var(--blue);"><span id="batteryBBar" style="--value:80%;"></span></div></div>
+            <div class="battery"><strong><span id="batteryC">50</span>%</strong><small>타 발전</small><div class="battery-fill" style="--fill: var(--green);"><span id="batteryCBar" style="--value:50%;"></span></div></div>
+          </div>
+          <div class="list">
+            <div class="list-item"><span class="tag">충전</span><div><div class="name">현재 충전 중</div><div class="desc">태양광 우선, 부족분은 풍력 보조</div></div><span class="tag blue">정상</span></div>
+            <div class="list-item"><span class="tag orange">예측</span><div><div class="name">저녁 전력 부족 가능</div><div class="desc">18시 이후 배터리 42% 예상</div></div><span class="tag orange">주의</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card info-panel right-panel">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">발전 현황</h2>
+            <div class="card-sub">풍력·태양광 이상 상태 정보</div>
+          </div>
+          <span class="tag">정상</span>
+        </div>
+        <div class="panel-body">
+          <div class="condition-grid">
+            <div class="condition"><span>태양광</span><strong id="solarState">효율 좋음</strong></div>
+            <div class="condition"><span>풍력</span><strong id="windState">가동 중</strong></div>
+            <div class="condition"><span>이상 상태</span><strong id="abnormalState">없음</strong></div>
+            <div class="condition"><span>전력 예측</span><strong id="powerForecast">여유</strong></div>
+          </div>
+          <div class="control-grid">
+            <div class="control">
+              <div class="control-head"><strong>펌프</strong><label class="switch"><input type="checkbox" data-device="pump" data-label="펌프"><span class="slider"></span></label></div>
+              <div class="field"><label><span>급수 시간</span><output id="waterOut">10초</output></label><input id="waterRange" type="range" min="3" max="60" value="10"></div>
+            </div>
+            <div class="control">
+              <div class="control-head"><strong>송풍팬</strong><label class="switch"><input type="checkbox" checked data-device="fan" data-label="송풍팬"><span class="slider"></span></label></div>
+              <div class="field"><label><span>출력</span><output id="fanOut">45%</output></label><input id="fanRange" type="range" min="0" max="100" value="45"></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card info-panel state-panel">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">경고 메시지 상태</h2>
+            <div class="card-sub">작물과 시스템 감정형 알림</div>
+          </div>
+          <span class="tag" id="moodTag">웃고있는 상태</span>
+        </div>
+        <div class="panel-body">
+          <div class="mood-grid">
+            <div class="mood happy"><div class="face">^^</div><div><div class="name">웃고있는 상태</div><div class="desc">온도, 습도, 토양 수분이 안정 범위입니다.</div></div></div>
+            <div class="mood bored"><div class="face">--</div><div><div class="name">무뚝뚝 상태</div><div class="desc">성장 조건은 보통이며 추가 관찰이 필요합니다.</div></div></div>
+            <div class="mood worry"><div class="face">!!</div><div><div class="name">불안한 상태</div><div class="desc">급수 또는 환기 조건이 기준에 가까워졌습니다.</div></div></div>
+            <div class="mood cry"><div class="face">ㅠㅠ</div><div><div class="name">울고있는 상태</div><div class="desc">화재, 저수분, 고온 등 즉시 조치가 필요합니다.</div></div></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card info-panel weather-panel">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">화면 및 날씨 정보</h2>
+            <div class="card-sub">날씨, 온도, 습도, 강수량</div>
+          </div>
+          <span class="tag blue">상주</span>
+        </div>
+        <div class="panel-body">
+          <div class="weather-main">
+            <div>
+              <strong id="weatherIcon">맑음</strong>
+              <div class="desc">스마트팜 외부 기상 기준</div>
+            </div>
+          </div>
+          <div class="weather-tabs">
+            <div class="weather-tab">날씨<span id="weatherText">맑음</span></div>
+            <div class="weather-tab">온도<span id="outsideTemp">27°C</span></div>
+            <div class="weather-tab">습도<span id="outsideHumidity">58%</span></div>
+            <div class="weather-tab">강수량<span id="rainfall">0 mm</span></div>
+          </div>
+          <div class="control-grid">
+            <div class="control">
+              <div class="control-head"><strong>스프링클러</strong><label class="switch"><input type="checkbox" data-device="sprinkler" data-label="스프링클러"><span class="slider"></span></label></div>
+              <div class="desc">화재 또는 고온 상황에서 자동 작동</div>
+            </div>
+            <div class="control">
+              <div class="control-head"><strong>상태 설명</strong><button class="ghost-btn" id="explainBtn" type="button">보기</button></div>
+              <div class="desc" id="explainText">현재 작물 상태는 안정입니다.</div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card emergency-panel">
+        <div class="card-head">
+          <div>
+            <h2 class="card-title">재난: 화재</h2>
+            <div class="card-sub">재난·이상기후 카테고리 및 신고 버튼</div>
+          </div>
+          <span class="tag red" id="fireTag">감시 중</span>
+        </div>
+        <div class="emergency-body">
+          <div class="alert-box">
+            <div class="desc">전력 예측과 E 발전 조건을 함께 확인하여 화재 위험과 정전 위험을 판단합니다.</div>
+            <div class="alert-number">119 <span>신고 버튼</span></div>
+          </div>
+          <div class="list">
+            <div class="list-item"><span class="tag red">전력</span><div><div class="name">전력 예측</div><div class="desc">배터리 잔량, 발전량, 소비 전력을 기반으로 부족 시간을 예측합니다.</div></div><span class="tag orange" id="riskTag">낮음</span></div>
+            <div class="list-item"><span class="tag orange">재난</span><div><div class="name">이상기후 카테고리</div><div class="desc">폭염, 강풍, 화재 위험 상태를 구분해 경고합니다.</div></div><span class="tag">대기</span></div>
+          </div>
+          <div class="emergency-actions">
+            <button class="primary-btn" id="fireDrillBtn" type="button">화재 모의 경보</button>
+            <button class="ghost-btn" id="resetBtn" type="button">정상 상태 복귀</button>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+
+    const state = {
+      mode: "자동",
+      demo: true,
+      fire: false,
+      sensors: { temp: 24.8, humidity: 63, soil: 48, light: 730 },
+      energy: { solarNow: 2.8, solarTotal: 18.4, windNow: 1.6, windTotal: 9.2, windSpeed: 4.8 },
+      battery: { a: 30, b: 80, c: 50 },
+      devices: { pump: false, fan: true, sprinkler: false }
+    };
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function jitter(value, min, max, amount) {
+      return clamp(value + (Math.random() * amount * 2 - amount), min, max);
+    }
+
+    function timeString() {
+      return new Date().toLocaleTimeString("ko-KR", { hour12: false });
+    }
+
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    function setBar(id, value) {
+      $(id).style.setProperty("--value", `${clamp(Math.round(value), 0, 100)}%`);
+    }
+
+    function setDeviceDot(kind) {
+      $("#deviceDot").className = `dot ${kind}`;
+    }
+
+    function render() {
+      $("#clock").textContent = timeString();
+      $("#modeText").textContent = state.mode;
+
+      $("#temp").textContent = state.sensors.temp.toFixed(1);
+      $("#humidity").textContent = Math.round(state.sensors.humidity);
+      $("#soil").textContent = Math.round(state.sensors.soil);
+      $("#light").textContent = Math.round(state.sensors.light);
+      setBar("#tempBar", state.sensors.temp / 40 * 100);
+      setBar("#humidityBar", state.sensors.humidity);
+      setBar("#soilBar", state.sensors.soil);
+      setBar("#lightBar", state.sensors.light / 10);
+
+      $("#solarNow").textContent = state.energy.solarNow.toFixed(1);
+      $("#solarTotal").textContent = state.energy.solarTotal.toFixed(1);
+      $("#panelTemp").textContent = Math.round(state.sensors.temp + 6);
+      $("#windNow").textContent = state.energy.windNow.toFixed(1);
+      $("#windTotal").textContent = state.energy.windTotal.toFixed(1);
+      $("#windSpeed").textContent = state.energy.windSpeed.toFixed(1);
+      $("#totalEnergy").textContent = (state.energy.solarTotal + state.energy.windTotal).toFixed(1);
+
+      $("#batteryA").textContent = Math.round(state.battery.a);
+      $("#batteryB").textContent = Math.round(state.battery.b);
+      $("#batteryC").textContent = Math.round(state.battery.c);
+      setBar("#batteryABar", state.battery.a);
+      setBar("#batteryBBar", state.battery.b);
+      setBar("#batteryCBar", state.battery.c);
+
+      const lowSoil = state.sensors.soil < 35;
+      const hot = state.sensors.temp > 30;
+      const lowPower = state.battery.b < 35;
+      const risk = state.fire || hot || lowSoil || lowPower;
+
+      $("#solarState").textContent = state.energy.solarNow > 2.2 ? "효율 좋음" : "발전 낮음";
+      $("#windState").textContent = state.energy.windSpeed > 3.5 ? "가동 중" : "대기";
+      $("#abnormalState").textContent = state.fire ? "화재 경보" : risk ? "주의 필요" : "없음";
+      $("#powerForecast").textContent = lowPower ? "부족 예상" : "여유";
+      $("#riskTag").textContent = state.fire ? "높음" : risk ? "중간" : "낮음";
+      $("#fireTag").textContent = state.fire ? "화재 경보" : "감시 중";
+      $("#fireTag").className = state.fire ? "tag red" : "tag";
+
+      if (state.fire) {
+        $("#moodTag").textContent = "울고있는 상태";
+        $("#explainText").textContent = "화재 모의 경보가 켜져 있습니다. 스프링클러와 119 신고 동선을 확인하세요.";
+        setDeviceDot("danger");
+        $("#deviceText").textContent = "화재 경보";
+      } else if (lowSoil || hot || lowPower) {
+        $("#moodTag").textContent = "불안한 상태";
+        $("#explainText").textContent = "일부 환경값이 기준에 가까워졌습니다. 급수와 환기 조건을 확인하세요.";
+        setDeviceDot("warn");
+        $("#deviceText").textContent = "주의 상태";
+      } else {
+        $("#moodTag").textContent = "웃고있는 상태";
+        $("#explainText").textContent = "현재 작물 상태는 안정입니다.";
+        setDeviceDot("warn");
+        $("#deviceText").textContent = "센서 모의 연결";
+      }
+
+      $$("[data-device]").forEach((input) => {
+        input.checked = Boolean(state.devices[input.dataset.device]);
+      });
+    }
+
+    async function tryApi(path, options = {}) {
+      try {
+        const response = await fetch(path, {
+          headers: { "Content-Type": "application/json" },
+          ...options
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        state.demo = false;
+        $("#deviceText").textContent = "실제 센서 연결";
+        setDeviceDot("");
+        return await response.json();
+      } catch {
+        state.demo = true;
+        return null;
+      }
+    }
+
+    async function refreshData() {
+      const data = await tryApi("/api/status");
+      if (data) {
+        state.sensors.temp = Number(data.temp ?? data.temperature ?? state.sensors.temp);
+        state.sensors.humidity = Number(data.humidity ?? state.sensors.humidity);
+        state.sensors.soil = Number(data.soil ?? state.sensors.soil);
+        state.sensors.light = Number(data.light ?? state.sensors.light);
+        state.energy.solarNow = Number(data.solarNow ?? state.energy.solarNow);
+        state.energy.windNow = Number(data.windNow ?? state.energy.windNow);
+      } else if (!state.fire) {
+        state.sensors.temp = jitter(state.sensors.temp, 18, 34, 0.5);
+        state.sensors.humidity = jitter(state.sensors.humidity, 38, 88, 2);
+        state.sensors.soil = jitter(state.sensors.soil, 24, 82, 2.8);
+        state.sensors.light = jitter(state.sensors.light, 180, 980, 55);
+        state.energy.solarNow = jitter(state.energy.solarNow, 0.7, 4.2, 0.25);
+        state.energy.windNow = jitter(state.energy.windNow, 0.2, 3.1, 0.22);
+        state.energy.windSpeed = jitter(state.energy.windSpeed, 1.2, 8.4, 0.35);
+        state.energy.solarTotal = clamp(state.energy.solarTotal + state.energy.solarNow / 80, 0, 80);
+        state.energy.windTotal = clamp(state.energy.windTotal + state.energy.windNow / 80, 0, 60);
+        state.battery.b = clamp(state.battery.b + (state.energy.solarNow + state.energy.windNow - 2.5) / 18, 0, 100);
+      }
+      render();
+    }
+
+    function bindRange(rangeId, outId, suffix) {
+      const range = $(rangeId);
+      const out = $(outId);
+      const update = () => out.textContent = `${range.value}${suffix}`;
+      range.addEventListener("input", update);
+      range.addEventListener("change", () => showToast(`${out.previousElementSibling?.textContent || "설정"} ${range.value}${suffix}`));
+      update();
+    }
+
+    bindRange("#waterRange", "#waterOut", "초");
+    bindRange("#fanRange", "#fanOut", "%");
+
+    $$("[data-device]").forEach((input) => {
+      input.addEventListener("change", async () => {
+        const device = input.dataset.device;
+        const label = input.dataset.label;
+        state.devices[device] = input.checked;
+        await tryApi(`/api/device/${device}`, {
+          method: "POST",
+          body: JSON.stringify({ on: input.checked })
+        });
+        if (device === "sprinkler" && input.checked) state.sensors.humidity = clamp(state.sensors.humidity + 4, 0, 100);
+        showToast(`${label} ${input.checked ? "ON" : "OFF"}`);
+        render();
+      });
+    });
+
+    $("#refreshBtn").addEventListener("click", () => {
+      refreshData();
+      showToast("센서 값을 갱신했습니다.");
+    });
+
+    $("#solarBtn").addEventListener("click", () => showToast(`태양광 오늘 누적 ${$("#solarTotal").textContent} kWh`));
+    $("#windBtn").addEventListener("click", () => showToast(`풍력 현재 풍속 ${$("#windSpeed").textContent} m/s`));
+    $("#explainBtn").addEventListener("click", () => showToast($("#explainText").textContent));
+
+    $("#fireDrillBtn").addEventListener("click", async () => {
+      state.fire = true;
+      state.devices.sprinkler = true;
+      state.sensors.temp = 36.5;
+      state.sensors.humidity = 34;
+      await tryApi("/api/emergency/fire", { method: "POST", body: JSON.stringify({ fire: true }) });
+      showToast("화재 모의 경보가 실행되었습니다.");
+      render();
+    });
+
+    $("#resetBtn").addEventListener("click", async () => {
+      state.fire = false;
+      state.devices.sprinkler = false;
+      state.sensors.temp = 24.8;
+      state.sensors.humidity = 63;
+      state.sensors.soil = 48;
+      await tryApi("/api/emergency/reset", { method: "POST", body: JSON.stringify({ fire: false }) });
+      showToast("정상 상태로 복귀했습니다.");
+      render();
+    });
+
+    setInterval(() => {
+      $("#clock").textContent = timeString();
+    }, 1000);
+
+    render();
+    refreshData();
+    setInterval(refreshData, 7000);
+  </script>
+</body>
+</html>
