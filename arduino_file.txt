@@ -1,0 +1,339 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_NeoPixel.h>
+#include "DHT.h"
+
+// 센서 및 LED 핀
+#define DHTPIN A0
+#define DHTTYPE DHT11
+#define SOIL_PIN A1
+#define LED_PIN 9
+#define LED_COUNT 12
+
+// 팬 모터 드라이버 핀
+const byte AA = 5;
+const byte AB = 4;
+const byte BA = 6;
+const byte BB = 7;
+
+// 장치 객체
+DHT dht(DHTPIN, DHTTYPE);
+Adafruit_NeoPixel rgbLed(
+  LED_COUNT,
+  LED_PIN,
+  NEO_GRB + NEO_KHZ800
+);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
+// 자동제어 기준값
+float maxHumidity = 60.0;
+float maxTemperature = 30.0;
+float minTemperature = 22.0;
+int soilReference = 50;
+
+// 현재 상태
+bool autoMode = true;
+bool fanState = false;
+bool ledState = false;
+
+float temperature = 0;
+float humidity = 0;
+int soilPercent = 0;
+
+unsigned long lastSample = 0;
+String commandBuffer;
+
+/*
+ * 팬 2개를 동시에 제어합니다.
+ *
+ * 첫 번째 팬: AA, AB
+ * 두 번째 팬: BA, BB
+ */
+void setFan(bool on) {
+  fanState = on;
+
+  digitalWrite(AA, on ? HIGH : LOW);
+  digitalWrite(AB, LOW);
+
+  digitalWrite(BA, on ? HIGH : LOW);
+  digitalWrite(BB, LOW);
+}
+
+/*
+ * 네오픽셀 LED 12개의 색상을 설정합니다.
+ */
+void setLed(byte red, byte green, byte blue) {
+  ledState = (red > 0 || green > 0 || blue > 0);
+
+  for (int i = 0; i < LED_COUNT; i++) {
+    rgbLed.setPixelColor(
+      i,
+      rgbLed.Color(red, green, blue)
+    );
+  }
+
+  rgbLed.show();
+}
+
+/*
+ * 센서와 장치 상태를 JSON 형식으로 전송합니다.
+ */
+void sendStatus() {
+  Serial.print(F("{\"temperature\":"));
+  Serial.print(temperature, 1);
+
+  Serial.print(F(",\"humidity\":"));
+  Serial.print(humidity, 1);
+
+  Serial.print(F(",\"soil\":"));
+  Serial.print(soilPercent);
+
+  Serial.print(F(",\"fan\":"));
+  Serial.print(fanState ? F("true") : F("false"));
+
+  Serial.print(F(",\"led\":"));
+  Serial.print(ledState ? F("true") : F("false"));
+
+  Serial.print(F(",\"mode\":\""));
+  Serial.print(autoMode ? F("AUTO") : F("MANUAL"));
+
+  Serial.println(F("\"}"));
+}
+
+/*
+ * 자동모드 동작
+ *
+ * 온도 또는 습도가 높으면:
+ *   팬 ON, LED OFF
+ *
+ * 온도가 낮으면:
+ *   팬 OFF, LED ON
+ *
+ * 정상 범위이면:
+ *   팬 OFF, LED OFF
+ */
+void applyAutomaticControl() {
+  if (!autoMode) {
+    return;
+  }
+
+  if (
+    temperature > maxTemperature ||
+    humidity > maxHumidity
+  ) {
+    setFan(true);
+    setLed(0, 0, 0);
+  }
+  else if (temperature < minTemperature) {
+    setFan(false);
+    setLed(100, 100, 100);
+  }
+  else {
+    setFan(false);
+    setLed(0, 0, 0);
+  }
+}
+
+/*
+ * LCD 화면을 갱신합니다.
+ */
+void updateLcd() {
+  lcd.setCursor(0, 0);
+  lcd.print(F("T:"));
+  lcd.print((int)temperature);
+  lcd.print(F("C "));
+
+  lcd.print(F("H:"));
+  lcd.print((int)humidity);
+  lcd.print(F("% "));
+
+  lcd.setCursor(0, 1);
+
+  if (soilPercent < soilReference) {
+    lcd.print(F("Supply water!   "));
+  }
+  else {
+    lcd.print(F("Soil:"));
+    lcd.print(soilPercent);
+    lcd.print(F("%      "));
+  }
+}
+
+/*
+ * Python 또는 웹 서버에서 받은 명령을 처리합니다.
+ */
+void handleCommand(String command) {
+  command.trim();
+
+  if (command == "STATUS") {
+    sendStatus();
+    return;
+  }
+
+  if (command == "MODE:AUTO") {
+    autoMode = true;
+    applyAutomaticControl();
+  }
+  else if (command == "MODE:MANUAL") {
+    autoMode = false;
+  }
+  else if (command == "FAN:ON") {
+    autoMode = false;
+    setFan(true);
+  }
+  else if (command == "FAN:OFF") {
+    autoMode = false;
+    setFan(false);
+  }
+  else if (command.startsWith("LED:")) {
+    autoMode = false;
+
+    int firstComma = command.indexOf(',');
+    int secondComma = command.indexOf(',', firstComma + 1);
+
+    if (
+      firstComma > 4 &&
+      secondComma > firstComma
+    ) {
+      int redValue =
+        command.substring(4, firstComma).toInt();
+
+      int greenValue =
+        command.substring(
+          firstComma + 1,
+          secondComma
+        ).toInt();
+
+      int blueValue =
+        command.substring(secondComma + 1).toInt();
+
+      byte red = constrain(redValue, 0, 255);
+      byte green = constrain(greenValue, 0, 255);
+      byte blue = constrain(blueValue, 0, 255);
+
+      setLed(red, green, blue);
+    }
+  }
+  else if (command.startsWith("SET:")) {
+    int comma1 = command.indexOf(',');
+    int comma2 = command.indexOf(',', comma1 + 1);
+    int comma3 = command.indexOf(',', comma2 + 1);
+
+    if (
+      comma1 > 4 &&
+      comma2 > comma1 &&
+      comma3 > comma2
+    ) {
+      maxHumidity =
+        command.substring(4, comma1).toFloat();
+
+      maxTemperature =
+        command.substring(
+          comma1 + 1,
+          comma2
+        ).toFloat();
+
+      minTemperature =
+        command.substring(
+          comma2 + 1,
+          comma3
+        ).toFloat();
+
+      soilReference = constrain(
+        command.substring(comma3 + 1).toInt(),
+        0,
+        100
+      );
+
+      applyAutomaticControl();
+    }
+  }
+
+  sendStatus();
+}
+
+void setup() {
+  // USB 시리얼 통신
+  Serial.begin(9600);
+
+  // 센서 시작
+  dht.begin();
+
+  // LCD 시작
+  lcd.init();
+  lcd.backlight();
+
+  // 네오픽셀 시작
+  rgbLed.begin();
+  rgbLed.setBrightness(120);
+  rgbLed.clear();
+  rgbLed.show();
+
+  // 팬 제어핀 설정
+  pinMode(AA, OUTPUT);
+  pinMode(AB, OUTPUT);
+  pinMode(BA, OUTPUT);
+  pinMode(BB, OUTPUT);
+
+  setFan(false);
+
+  lcd.setCursor(0, 0);
+  lcd.print(F("Smart Farm"));
+  lcd.setCursor(0, 1);
+  lcd.print(F("Ready"));
+
+  delay(1000);
+  lcd.clear();
+}
+
+void loop() {
+  /*
+   * 시리얼 명령을 한 줄씩 읽습니다.
+   * 각 명령 끝에는 줄바꿈 \n이 필요합니다.
+   */
+  while (Serial.available() > 0) {
+    char incoming = Serial.read();
+
+    if (incoming == '\n') {
+      if (commandBuffer.length() > 0) {
+        handleCommand(commandBuffer);
+      }
+
+      commandBuffer = "";
+    }
+    else if (
+      incoming != '\r' &&
+      commandBuffer.length() < 80
+    ) {
+      commandBuffer += incoming;
+    }
+  }
+
+  // 2초마다 센서 측정
+  if (millis() - lastSample >= 2000) {
+    lastSample = millis();
+
+    float newHumidity = dht.readHumidity();
+    float newTemperature = dht.readTemperature();
+
+    if (!isnan(newHumidity)) {
+      humidity = newHumidity;
+    }
+
+    if (!isnan(newTemperature)) {
+      temperature = newTemperature;
+    }
+
+    int soilRaw = analogRead(SOIL_PIN);
+
+    soilPercent = constrain(
+      map(soilRaw, 1023, 0, 0, 100),
+      0,
+      100
+    );
+
+    applyAutomaticControl();
+    updateLcd();
+    sendStatus();
+  }
+}
